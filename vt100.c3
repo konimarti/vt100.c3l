@@ -279,8 +279,8 @@ fn void VTParser.parse(&self, InStream in)
 
 fn void VTParser.state_change(&self, Char32 ch) @private
 {
-	// Print unicode characters if above Latin-1 range [0,0xFF]
-	if (ch > 0xFF)
+	// Print unicode characters if above ASCII range [0,0x7F]
+	if (ch > 0x7F)
 	{
 		self.action(ACTION_PRINT, ch);
 		return;
