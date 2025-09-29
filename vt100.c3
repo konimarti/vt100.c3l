@@ -323,6 +323,7 @@ fn void VTParser.action(&self, Actions action, Char32 ch) @private
 		case ACTION_CSI_DISPATCH:
 		case ACTION_ESC_DISPATCH:
 			self.cb(self, action, ch);
+		case ACTION_NONE:
 		case ACTION_IGNORE:
 			break;
 		case ACTION_COLLECT:
@@ -362,8 +363,6 @@ fn void VTParser.action(&self, Actions action, Char32 ch) @private
 			self.num_chars = 0;
 			self.num_params = 0;
 			self.ignore_flagged = false;
-		default:
-			self.cb(self, ACTION_ERROR, 0);
 	}
 }
 
