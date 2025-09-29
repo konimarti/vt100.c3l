@@ -239,20 +239,20 @@ fn void init_transitions() @init
 	$endfor
 }
 
-alias VTParserCallback = fn void(VTParser*, Actions, char);
+alias VTParserCallback = fn void(VTParser*, Actions, Char32);
 
 const usz MAX_CHARS = 2;
 
 struct VTParser
 {
-	States    	  state;
-	VTParserCallback  cb;
-	char[MAX_CHARS+1] chars;
-	int               num_chars;
-	bool              ignore_flagged;
-	int[16]           params;
-	int               num_params;
-	void*             user_data;
+	States    	    state;
+	VTParserCallback    cb;
+	Char32[MAX_CHARS+1] chars;
+	usz                 num_chars;
+	bool                ignore_flagged;
+	int[16]             params;
+	usz                 num_params;
+	void*               user_data;
 }
 
 <*
@@ -269,15 +269,25 @@ fn void VTParser.init(&self, VTParserCallback cb, void* user_data = null)
 
 fn void VTParser.parse(&self, InStream in)
 {
-	while (try ch = in.read_byte())
+	usz size = 4;
+	while (try ch = stream_utf8_to_char32(in, &size))
 	{
 		self.state_change(ch);
+		size = 4;
 	}
 }
 
-fn void VTParser.state_change(&self, char ch) @private
+fn void VTParser.state_change(&self, Char32 ch) @private
 {
-	Transition trn = transition[self.state][ch];
+	// Print unicode characters
+	if (ch > 0xFF)
+	{
+		self.action(ACTION_PRINT, ch);
+		return;
+	}
+
+	// Run finite state machine
+	Transition trn = transition[self.state][(char)ch];
 	if (trn.state != STATE_NONE)
 	{
 		// exit action (from current state)
@@ -298,7 +308,7 @@ fn void VTParser.state_change(&self, char ch) @private
 	}
 }
 
-fn void VTParser.action(&self, Actions action, char ch) @private
+fn void VTParser.action(&self, Actions action, Char32 ch) @private
 {
 	switch (action)
 	{
@@ -337,7 +347,7 @@ fn void VTParser.action(&self, Actions action, char ch) @private
 			}
 			else
 			{
-				int current_param;
+				usz current_param;
 				if (self.num_params == 0)
 				{
 					self.num_params = 1;
@@ -355,4 +365,59 @@ fn void VTParser.action(&self, Actions action, char ch) @private
 		default:
 			self.cb(self, ACTION_ERROR, 0);
 	}
+}
+
+<*
+ @param in : `utf-8 encoded input stream`
+ @param [inout] size : `Set to max characters to read, set to characters read`
+ @return `the parsed 32 bit codepoint`
+*>
+fn Char32? stream_utf8_to_char32(InStream in, usz* size)
+{
+	usz max_size = *size;
+	if (max_size < 1) return string::INVALID_UTF8?;
+	char c = in.read_byte()!;
+
+	if ((c & 0x80) == 0)
+	{
+		*size = 1;
+		return c;
+	}
+	if ((c & 0xE0) == 0xC0)
+	{
+		if (max_size < 2) return string::INVALID_UTF8?;
+		*size = 2;
+		Char32 uc = (c & 0x1F) << 6;
+		c = in.read_byte()!;
+		// Overlong sequence or invalid second.
+		if (!uc || c & 0xC0 != 0x80) return string::INVALID_UTF8?;
+		return uc + c & 0x3F;
+	}
+	if ((c & 0xF0) == 0xE0)
+	{
+		if (max_size < 3) return string::INVALID_UTF8?;
+		*size = 3;
+		Char32 uc = (c & 0x0F) << 12;
+		c = in.read_byte()!;
+		if (c & 0xC0 != 0x80) return string::INVALID_UTF8?;
+		uc += (c & 0x3F) << 6;
+		c = in.read_byte()!;
+		// Overlong sequence or invalid last
+		if (!uc || c & 0xC0 != 0x80) return string::INVALID_UTF8?;
+		return uc + c & 0x3F;
+	}
+	if (max_size < 4) return string::INVALID_UTF8?;
+	if ((c & 0xF8) != 0xF0) return string::INVALID_UTF8?;
+	*size = 4;
+	Char32 uc = (c & 0x07) << 18;
+	c = in.read_byte()!;
+	if (c & 0xC0 != 0x80) return string::INVALID_UTF8?;
+	uc += (c & 0x3F) << 12;
+	c = in.read_byte()!;
+	if (c & 0xC0 != 0x80) return string::INVALID_UTF8?;
+	uc += (c & 0x3F) << 6;
+	c = in.read_byte()!;
+	// Overlong sequence or invalid last
+	if (!uc || c & 0xC0 != 0x80) return string::INVALID_UTF8?;
+	return uc + c & 0x3F;
 }
