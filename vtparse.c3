@@ -41,12 +41,6 @@ enum Actions : const inline char
 	ACTION_ERROR,
 }
 
-struct Transition
-{
-	States  state;
-	Actions action;
-}
-
 Actions[States.len] entry_actions = {
    ACTION_NONE,
    ACTION_CLEAR,     /* CSI_ENTRY */
@@ -82,6 +76,12 @@ Actions[States.len] exit_actions = {
    ACTION_OSC_END,         /* OSC_STRING */
    ACTION_NONE,            /* none for SOS_PM_APC_STRING */
 };
+
+struct Transition
+{
+	States  state;
+	Actions action;
+}
 
 Transition[char.max][*] transition = {
 	[States.STATE_CSI_ENTRY]           = {
@@ -245,14 +245,14 @@ const usz MAX_CHARS = 2;
 
 struct VTParser
 {
-	States    	    state;
-	VTParserCallback    cb;
-	Char32[MAX_CHARS+1] chars;
-	usz                 num_chars;
-	bool                ignore_flagged;
-	int[16]             params;
-	usz                 num_params;
-	void*               user_data;
+	States    	  state;
+	VTParserCallback  cb;
+	char[MAX_CHARS+1] chars;
+	usz               num_chars;
+	bool              ignore_flagged;
+	int[16]           params;
+	usz               num_params;
+	void*             user_data;
 }
 
 <*
@@ -279,7 +279,7 @@ fn void VTParser.parse(&self, InStream in)
 
 fn void VTParser.state_change(&self, Char32 ch) @private
 {
-	// Print unicode characters
+	// Print unicode characters if above Latin-1 range [0,0xFF]
 	if (ch > 0xFF)
 	{
 		self.action(ACTION_PRINT, ch);
@@ -290,16 +290,16 @@ fn void VTParser.state_change(&self, Char32 ch) @private
 	Transition trn = transition[self.state][(char)ch];
 	if (trn.state != STATE_NONE)
 	{
-		// exit action (from current state)
+		// Exit action (from current state)
 		self.action(exit_actions[self.state], 0);
 
-		// state action
+		// State action
 		self.action(trn.action, ch);
 
-		// entry action
+		// Entry action
 		self.action(entry_actions[trn.state], 0);
 
-		// state change
+		// State change
 		self.state = trn.state;
 	}
 	else
@@ -332,7 +332,7 @@ fn void VTParser.action(&self, Actions action, Char32 ch) @private
 			}
 			else
 			{
-				self.chars[self.num_chars++] = ch;
+				self.chars[self.num_chars++] = (char)ch;
 			}
 		case ACTION_PARAM:
 			if (ch == ';')

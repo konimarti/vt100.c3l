@@ -38,20 +38,19 @@ fn void parser_callback(VTParser *parser, Actions action, Char32 c) => @pool()
 	char[4] out;
 	switch (action)
 	{
+		case ACTION_EXECUTE:
 		case ACTION_PRINT:
-			if (c > 0x7F)
+			if (c > 0xFF)
 			{
-				if (try len = conv::char32_to_utf8(c, out[..])) 
+				if (try len = conv::char32_to_utf8(c, out[..]))
 				{
 					io::printf("%s", (String)out[:len]);
-				}	
+				}
 			}
 			else
 			{
 				io::printf("%c", (char)c);
 			}
-		case ACTION_EXECUTE:
-			io::printf('\n');
 		default:
 			break;
 	}

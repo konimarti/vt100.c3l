@@ -6,6 +6,10 @@
 	"targets": {
 		"testrunner": {
 			"type": "executable"
+		},
+		"vtparse": {
+			"type": "executable",
+			"sources": [ "src/vtparse/main.c3" ]
 		}
 	}
 }
