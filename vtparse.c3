@@ -328,6 +328,11 @@ fn void VTParser.action(&self, Actions action, char ch) @private
 			if (ch == ';')
 			{
 				self.num_params++;
+				if (self.num_params >= self.params.len)
+				{
+					self.cb(self, ACTION_ERROR, 0);
+					return;
+				}
 				self.params[self.num_params - 1] = 0;
 			}
 			else
