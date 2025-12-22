@@ -9,7 +9,7 @@ fn void parser_callback(VTParser *parser, Actions action, Char32 c) => @pool()
 	buf.appendf("Received action: %s\n", Actions.names[action]);
 	buf.appendf("Char: 0x%04x ('", c);
 	buf.append_char32(c);
-	buf.append_chars("')\n");
+	buf.append_string("')\n");
 	if (parser.num_chars)
 	{
 		buf.appendf("%d Intermediate chars:\n", parser.num_chars);
