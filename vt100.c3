@@ -374,7 +374,7 @@ fn void VTParser.action(&self, Actions action, Char32 ch) @private
 fn Char32? stream_utf8_to_char32(InStream in, usz* size)
 {
 	usz max_size = *size;
-	if (max_size < 1) return string::INVALID_UTF8?;
+	if (max_size < 1) return string::INVALID_UTF8~;
 	char c = in.read_byte()!;
 
 	if ((c & 0x80) == 0)
@@ -384,39 +384,39 @@ fn Char32? stream_utf8_to_char32(InStream in, usz* size)
 	}
 	if ((c & 0xE0) == 0xC0)
 	{
-		if (max_size < 2) return string::INVALID_UTF8?;
+		if (max_size < 2) return string::INVALID_UTF8~;
 		*size = 2;
 		Char32 uc = (c & 0x1F) << 6;
 		c = in.read_byte()!;
 		// Overlong sequence or invalid second.
-		if (!uc || c & 0xC0 != 0x80) return string::INVALID_UTF8?;
+		if (!uc || c & 0xC0 != 0x80) return string::INVALID_UTF8~;
 		return uc + c & 0x3F;
 	}
 	if ((c & 0xF0) == 0xE0)
 	{
-		if (max_size < 3) return string::INVALID_UTF8?;
+		if (max_size < 3) return string::INVALID_UTF8~;
 		*size = 3;
 		Char32 uc = (c & 0x0F) << 12;
 		c = in.read_byte()!;
-		if (c & 0xC0 != 0x80) return string::INVALID_UTF8?;
+		if (c & 0xC0 != 0x80) return string::INVALID_UTF8~;
 		uc += (c & 0x3F) << 6;
 		c = in.read_byte()!;
 		// Overlong sequence or invalid last
-		if (!uc || c & 0xC0 != 0x80) return string::INVALID_UTF8?;
+		if (!uc || c & 0xC0 != 0x80) return string::INVALID_UTF8~;
 		return uc + c & 0x3F;
 	}
-	if (max_size < 4) return string::INVALID_UTF8?;
-	if ((c & 0xF8) != 0xF0) return string::INVALID_UTF8?;
+	if (max_size < 4) return string::INVALID_UTF8~;
+	if ((c & 0xF8) != 0xF0) return string::INVALID_UTF8~;
 	*size = 4;
 	Char32 uc = (c & 0x07) << 18;
 	c = in.read_byte()!;
-	if (c & 0xC0 != 0x80) return string::INVALID_UTF8?;
+	if (c & 0xC0 != 0x80) return string::INVALID_UTF8~;
 	uc += (c & 0x3F) << 12;
 	c = in.read_byte()!;
-	if (c & 0xC0 != 0x80) return string::INVALID_UTF8?;
+	if (c & 0xC0 != 0x80) return string::INVALID_UTF8~;
 	uc += (c & 0x3F) << 6;
 	c = in.read_byte()!;
 	// Overlong sequence or invalid last
-	if (!uc || c & 0xC0 != 0x80) return string::INVALID_UTF8?;
+	if (!uc || c & 0xC0 != 0x80) return string::INVALID_UTF8~;
 	return uc + c & 0x3F;
 }
